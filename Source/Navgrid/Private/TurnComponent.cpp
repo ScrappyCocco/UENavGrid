@@ -1,29 +1,30 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "TurnComponent.H"
 
-UTurnComponent::UTurnComponent()
-	:Super(),
-	TurnManager(nullptr),
-	StartingActionPoints(1),
-	RemainingActionPoints(1),
-	TurnTimeout(30)
-{
-}
+#include "NavGrid.h"
+#include "NavGridGameState.h"
+
+UTurnComponent::UTurnComponent() : Super(),
+StartingActionPoints(1),
+RemainingActionPoints(1),
+TurnTimeout(30),
+TurnManager(nullptr)
+{}
 
 void UTurnComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
 	RegisterWithTurnManager();
 }
 
 void UTurnComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
 {
-	Super::OnComponentDestroyed(bDestroyingHierarchy);
 	UnregisterWithTurnManager();
+
+	Super::OnComponentDestroyed(bDestroyingHierarchy);
 }
 
-ATurnManager * UTurnComponent::GetTurnManager()
+ATurnManager* UTurnComponent::GetTurnManager()
 {
 	if (!IsValid(TurnManager))
 	{
@@ -53,7 +54,6 @@ void UTurnComponent::RequestStartTurn()
 	if (IsValid(TurnManager))
 	{
 		TurnManager->RequestStartTurn(this);
-
 	}
 }
 
@@ -83,7 +83,7 @@ void UTurnComponent::OwnerReadyForInput()
 	}
 }
 
-AActor *UTurnComponent::GetCurrentActor() const
+AActor* UTurnComponent::GetCurrentActor() const
 {
 	if (IsValid(TurnManager))
 	{
@@ -95,7 +95,8 @@ AActor *UTurnComponent::GetCurrentActor() const
 void UTurnComponent::RegisterWithTurnManager()
 {
 	UnregisterWithTurnManager();
-	ANavGridGameState *GameState = GetWorld()->GetGameState<ANavGridGameState>();
+
+	ANavGridGameState* GameState = GetWorld()->GetGameState<ANavGridGameState>();
 	if (IsValid(GameState))
 	{
 		TurnManager = GameState->GetTurnManager();

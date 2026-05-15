@@ -1,7 +1,9 @@
 #include "NavTileActor.h"
 
-ANavTileActor::ANavTileActor(const FObjectInitializer &ObjectInitializer)
-	:Super(ObjectInitializer)
+#include "NavGrid.h"
+#include "NavTileComponent.h"
+
+ANavTileActor::ANavTileActor(const FObjectInitializer& ObjectInitializer) :Super(ObjectInitializer)
 {
 	SceneComponent = CreateDefaultSubobject<USceneComponent>("RootComponent");
 	RootComponent = SceneComponent;

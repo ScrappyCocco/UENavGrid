@@ -1,6 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "NavGridGameState.h"
+
+#include "EngineUtils.h"
+#include "NavGrid.h"
 
 ANavGrid* ANavGridGameState::GetNavGrid()
 {
@@ -40,16 +41,16 @@ ATurnManager* ANavGridGameState::GetTurnManager()
 	return TurnManager;
 }
 
-ATurnManager * ANavGridGameState::SpawnTurnManager()
+ATurnManager* ANavGridGameState::SpawnTurnManager()
 {
-	ATurnManager *Manager = GetWorld()->SpawnActor<ATurnManager>();
+	ATurnManager* Manager = GetWorld()->SpawnActor<ATurnManager>();
 	Manager->SetOwner(this);
 	return Manager;
 }
 
-ANavGrid * ANavGridGameState::SpawnNavGrid()
+ANavGrid* ANavGridGameState::SpawnNavGrid()
 {
-	ANavGrid *NewGrid = GetWorld()->SpawnActor<ANavGrid>();
+	ANavGrid* NewGrid = GetWorld()->SpawnActor<ANavGrid>();
 	NewGrid->SetOwner(this);
 	return NewGrid;
 }

@@ -1,5 +1,8 @@
 #include "TurnManager.h"
 
+#include "NavGrid.h"
+#include "TurnComponent.h"
+
 ATurnManager::ATurnManager() :
 	MinNumberOfTeams(1),
 	CurrentComponent(nullptr),
@@ -37,7 +40,7 @@ void ATurnManager::Tick(float DeltaTime)
 				OnRoundEnd().Broadcast();
 			}
 
-			for (TPair<FGenericTeamId, UTurnComponent *> &Pair : Teams)
+			for (TPair<FGenericTeamId, TObjectPtr<UTurnComponent>>& Pair : Teams)
 			{
 				Pair.Value->RemainingActionPoints = Pair.Value->StartingActionPoints;
 			}
@@ -65,7 +68,7 @@ void ATurnManager::Tick(float DeltaTime)
 
 		// broadcast TurnStart and TeamTurnStart
 		check(IsValid(NextComponent))
-		UTurnComponent *PreviousComponent = CurrentComponent;
+			UTurnComponent* PreviousComponent = CurrentComponent;
 		CurrentComponent = NextComponent;
 		if (!IsValid(PreviousComponent) || CurrentComponent->TeamId() != PreviousComponent->TeamId())
 		{
@@ -80,13 +83,13 @@ void ATurnManager::Tick(float DeltaTime)
 	}
 }
 
-void ATurnManager::RegisterTurnComponent(UTurnComponent *TurnComponent)
+void ATurnManager::RegisterTurnComponent(UTurnComponent* TurnComponent)
 {
 	UE_LOG(NavGrid, Verbose, TEXT("%s (team %i) registering"), *TurnComponent->GetName(), TurnComponent->TeamId().GetId());
 	Teams.AddUnique(TurnComponent->TeamId(), TurnComponent);
 }
 
-void ATurnManager::UnregisterTurnComponent(UTurnComponent * TurnComponent)
+void ATurnManager::UnregisterTurnComponent(UTurnComponent* TurnComponent)
 {
 	UE_LOG(NavGrid, Verbose, TEXT("%s (team %i) unregistering"), *TurnComponent->GetName(), TurnComponent->TeamId().GetId());
 	Teams.RemoveSingle(TurnComponent->TeamId(), TurnComponent);
@@ -101,7 +104,7 @@ void ATurnManager::UnregisterTurnComponent(UTurnComponent * TurnComponent)
 	}
 }
 
-void ATurnManager::EndTurn(UTurnComponent *Ender)
+void ATurnManager::EndTurn(UTurnComponent* Ender)
 {
 	if (Ender == CurrentComponent)
 	{
@@ -115,7 +118,7 @@ void ATurnManager::EndTurn(UTurnComponent *Ender)
 		}
 		else
 		{
-			UE_LOG(NavGrid, Warning, TEXT("ATurnManager::EndTurn(%s): CurrentComponent: null"), *Ender->GetOwner()->GetName());
+			UE_LOG(NavGrid, Warning, TEXT("ATurnManager::EndTurn(%s): CurrentComponent: nullptr"), *Ender->GetOwner()->GetName());
 		}
 	}
 }
@@ -124,9 +127,9 @@ void ATurnManager::EndTeamTurn(FGenericTeamId InTeamId)
 {
 	if (CurrentComponent->TeamId() == InTeamId)
 	{
-		TArray<UTurnComponent *> TeamMemebers;
+		TArray<TObjectPtr<UTurnComponent>> TeamMemebers;
 		Teams.MultiFind(InTeamId, TeamMemebers);
-		for (UTurnComponent *Member : TeamMemebers)
+		for (TObjectPtr<UTurnComponent> Member : TeamMemebers)
 		{
 			Member->RemainingActionPoints = 0;
 		}
@@ -135,7 +138,7 @@ void ATurnManager::EndTeamTurn(FGenericTeamId InTeamId)
 	}
 }
 
-void ATurnManager::RequestStartTurn(UTurnComponent * CallingComponent)
+void ATurnManager::RequestStartTurn(UTurnComponent* CallingComponent)
 {
 	if (!IsValid(CurrentComponent) || CurrentComponent->TeamId() == CallingComponent->TeamId())
 	{
@@ -144,11 +147,11 @@ void ATurnManager::RequestStartTurn(UTurnComponent * CallingComponent)
 	}
 }
 
-void ATurnManager::RequestStartNextComponent(UTurnComponent *CallingComponent)
+void ATurnManager::RequestStartNextComponent(UTurnComponent* CallingComponent)
 {
 	if (IsValid(CurrentComponent) && CurrentComponent->TeamId() == CallingComponent->TeamId())
 	{
-		UTurnComponent *Candidate = FindNextTeamMember(CallingComponent->TeamId());
+		UTurnComponent* Candidate = FindNextTeamMember(CallingComponent->TeamId());
 		if (IsValid(Candidate))
 		{
 			NextComponent = Candidate;
@@ -162,20 +165,20 @@ FGenericTeamId ATurnManager::GetCurrentTeam() const
 	return CurrentComponent ? CurrentComponent->TeamId() : FGenericTeamId::NoTeam;
 }
 
-AActor *ATurnManager::GetCurrentActor() const
+AActor* ATurnManager::GetCurrentActor() const
 {
 	return IsValid(CurrentComponent) ? CurrentComponent->GetOwner() : nullptr;
 }
 
-UTurnComponent * ATurnManager::FindNextTeamMember(const FGenericTeamId & TeamId)
+UTurnComponent* ATurnManager::FindNextTeamMember(const FGenericTeamId& TeamId)
 {
-	TArray<UTurnComponent *> TeamMembers;
+	TArray<TObjectPtr<UTurnComponent>> TeamMembers;
 	Teams.MultiFind(TeamId, TeamMembers, true);
 	int32 StartIndex;
 	TeamMembers.Find(CurrentComponent, StartIndex);
 	for (int32 Idx = 1; Idx <= TeamMembers.Num(); Idx++)
 	{
-		UTurnComponent *Candidate = TeamMembers[(StartIndex + Idx) % TeamMembers.Num()];
+		UTurnComponent* Candidate = TeamMembers[(StartIndex + Idx) % TeamMembers.Num()];
 		if (Candidate->RemainingActionPoints > 0)
 		{
 			return Candidate;
@@ -184,14 +187,14 @@ UTurnComponent * ATurnManager::FindNextTeamMember(const FGenericTeamId & TeamId)
 	return nullptr;
 }
 
-UTurnComponent * ATurnManager::FindNextComponent()
+UTurnComponent* ATurnManager::FindNextComponent()
 {
 	TArray<FGenericTeamId> TeamIds;
 	Teams.GenerateKeyArray(TeamIds);
 	TeamIds.Sort();
-	for (FGenericTeamId &TeamId : TeamIds)
+	for (FGenericTeamId& TeamId : TeamIds)
 	{
-		UTurnComponent *Candidate = FindNextTeamMember(TeamId);
+		UTurnComponent* Candidate = FindNextTeamMember(TeamId);
 		if (IsValid(Candidate))
 		{
 			return Candidate;
@@ -203,7 +206,7 @@ UTurnComponent * ATurnManager::FindNextComponent()
 
 bool ATurnManager::HasComponentsThatCanAct()
 {
-	for (TPair<FGenericTeamId, UTurnComponent *> &Pair : Teams)
+	for (const TPair<FGenericTeamId, TObjectPtr<UTurnComponent>>& Pair : Teams)
 	{
 		if (Pair.Value->RemainingActionPoints > 0)
 		{

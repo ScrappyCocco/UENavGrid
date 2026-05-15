@@ -1,14 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "GridMovementComponent.h"
 
+#include "Animation/AnimInstance.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
+#include "GridPawn.h"
+#include "Kismet/GameplayStatics.h"
 #include "NavGrid.h"
 #include "NavGridGameState.h"
 #include "NavLadderComponent.h"
 #include "TurnComponent.h"
-#include "Components/SplineComponent.h"
-#include "Components/SplineMeshComponent.h"
-#include "Animation/AnimInstance.h"
 
 FPathSegment::FPathSegment(TSet<EGridMovementMode> InMovementModes, float InStart, float InEnd)
 {
@@ -17,8 +18,7 @@ FPathSegment::FPathSegment(TSet<EGridMovementMode> InMovementModes, float InStar
 	End = InEnd;
 }
 
-UGridMovementComponent::UGridMovementComponent(const FObjectInitializer &ObjectInitializer)
-	:Super(ObjectInitializer)
+UGridMovementComponent::UGridMovementComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PathMesh = ConstructorHelpers::FObjectFinder<UStaticMesh>(TEXT("StaticMesh'/NavGrid/SMesh/NavGrid_Path.NavGrid_Path'")).Object;
 
@@ -36,7 +36,7 @@ void UGridMovementComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	/* I dont know why, but if we use createdefaultsubobject in the constructor this is sometimes reset to NULL*/
+	/* I dont know why, but if we use createdefaultsubobject in the constructor this is sometimes reset to nullptr*/
 	if (!IsValid(Spline))
 	{
 		Spline = NewObject<USplineComponent>(this, "PathSpline");
@@ -70,7 +70,7 @@ void UGridMovementComponent::BeginPlay()
 	}
 }
 
-void UGridMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+void UGridMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
@@ -80,7 +80,7 @@ void UGridMovementComponent::TickComponent(float DeltaTime, enum ELevelTick Tick
 		MovementMode == EGridMovementMode::ClimbingUp)
 	{
 		CurrentPathSegment = FPathSegment({ EGridMovementMode::Walking }, 0, Spline->GetSplineLength());
-		for (FPathSegment &Segment : PathSegments)
+		for (FPathSegment& Segment : PathSegments)
 		{
 			if (Distance >= Segment.Start && Distance <= Segment.End)
 			{
@@ -90,11 +90,12 @@ void UGridMovementComponent::TickComponent(float DeltaTime, enum ELevelTick Tick
 		}
 	}
 
-	AActor *Owner = GetOwner();
+	AActor* Owner = GetOwner();
 	FTransform NewTransform = Owner->GetActorTransform();
 	FRotator ActorRotation = Owner->GetActorRotation();
 
 	ConsiderUpdateMovementMode();
+
 	switch (MovementMode)
 	{
 	default:
@@ -161,7 +162,7 @@ FTransform UGridMovementComponent::TransformFromPath(float DeltaTime)
 	Distance = FMath::Min(Spline->GetSplineLength(), Distance + CurrentSpeed);
 
 	/* Grab our current transform so we can find the velocity if we need it later */
-	AActor *Owner = GetOwner();
+	AActor* Owner = GetOwner();
 	FTransform OldTransform = Owner->GetTransform();
 
 	/* Find the next location and rotation from the spline*/
@@ -194,8 +195,9 @@ FTransform UGridMovementComponent::TransformFromPath(float DeltaTime)
 
 FTransform UGridMovementComponent::TransformFromRotation(float DeltaTime)
 {
-	AActor *Owner = GetOwner();
+	AActor* Owner = GetOwner();
 	FTransform NewTransform = Owner->GetActorTransform();
+
 	if (Owner->GetActorRotation().Equals(DesiredForwardRotation))
 	{
 		Owner->SetActorRotation(DesiredForwardRotation);
@@ -206,18 +208,18 @@ FTransform UGridMovementComponent::TransformFromRotation(float DeltaTime)
 		FRotator NewRotation = LimitRotation(Owner->GetActorRotation(), DesiredForwardRotation, DeltaTime);
 		NewTransform.SetRotation(NewRotation.Quaternion());
 	}
+
 	return NewTransform;
 }
 
 void UGridMovementComponent::ConsiderUpdateCurrentTile()
 {
 	// try to grab the tile we're on and store it in CurrentTile. Take care to not overwrite a pointer to an
-	// actual tile with NULL as that would mean we have moved off the grid
+	// actual tile with nullptr as that would mean we have moved off the grid
 	ANavGrid* Grid = GetNavGrid();
 	if (IsValid(Grid))
 	{
-
-		UNavTileComponent *Tile = Grid->GetTile(GetOwner()->GetActorLocation(), true);
+		UNavTileComponent* Tile = Grid->GetTile(GetOwner()->GetActorLocation(), true);
 		if (!Tile &&
 			(AvailableMovementModes.Contains(EGridMovementMode::ClimbingDown) ||
 				AvailableMovementModes.Contains(EGridMovementMode::ClimbingUp)))
@@ -229,19 +231,19 @@ void UGridMovementComponent::ConsiderUpdateCurrentTile()
 		{
 			CurrentTile = Tile;
 
-			ANavGridGameState *GameState = Cast<ANavGridGameState>(UGameplayStatics::GetGameState(GetOwner()));
+			ANavGridGameState* GameState = Cast<ANavGridGameState>(UGameplayStatics::GetGameState(GetOwner()));
 			if (IsValid(GameState))
 			{
-				AGridPawn *GridPawn = Cast<AGridPawn>(GetOwner());
+				AGridPawn* GridPawn = Cast<AGridPawn>(GetOwner());
 				GameState->OnPawnEnterTile().Broadcast(GridPawn, CurrentTile);
 			}
 		}
 	}
 }
 
-void UGridMovementComponent::GetTilesInRange(TArray<UNavTileComponent *> &OutTiles)
+void UGridMovementComponent::GetTilesInRange(TArray<UNavTileComponent*>& OutTiles)
 {
-	ANavGrid *Grid = GetNavGrid();
+	ANavGrid* Grid = GetNavGrid();
 	if (IsValid(Grid))
 	{
 		ConsiderUpdateCurrentTile();
@@ -249,21 +251,23 @@ void UGridMovementComponent::GetTilesInRange(TArray<UNavTileComponent *> &OutTil
 	}
 }
 
-UNavTileComponent *UGridMovementComponent::GetTile()
+UNavTileComponent* UGridMovementComponent::GetTile()
 {
 	if (!IsValid(CurrentTile))
 	{
 		ConsiderUpdateCurrentTile();
 	}
+
 	return CurrentTile;
 }
 
-ANavGrid * UGridMovementComponent::GetNavGrid()
+ANavGrid* UGridMovementComponent::GetNavGrid()
 {
 	if (!IsValid(CachedNavGrid))
 	{
 		CachedNavGrid = ANavGrid::GetNavGrid(GetOwner());
 	}
+
 	return CachedNavGrid;
 }
 
@@ -273,9 +277,9 @@ void UGridMovementComponent::StringPull(TArray<const UNavTileComponent*>& InPath
 
 	if (InPath.Num() > 2)
 	{
-		AGridPawn *GridPawnOwner = Cast<AGridPawn>(GetOwner());
+		AGridPawn* GridPawnOwner = Cast<AGridPawn>(GetOwner());
 		OutPath.Empty();
-		const UCapsuleComponent &Capsule = *GridPawnOwner->MovementCollisionCapsule;
+		const UCapsuleComponent& Capsule = *GridPawnOwner->MovementCollisionCapsule;
 		int32 CurrentIdx = 0;
 		OutPath.Add(InPath[0]);
 		for (int32 Idx = 1; Idx < InPath.Num() - 1; Idx++)
@@ -310,36 +314,38 @@ void UGridMovementComponent::StringPull(TArray<const UNavTileComponent*>& InPath
 	}
 }
 
-bool UGridMovementComponent::CreatePath(const UNavTileComponent &Target)
+bool UGridMovementComponent::CreatePath(const UNavTileComponent& Target)
 {
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_UGridMovementComponent_CreatePath);
-	AGridPawn *Owner = Cast<AGridPawn>(GetOwner());
 
 	if (!IsValid(CurrentTile))
 	{
+		AGridPawn* Owner = Cast<AGridPawn>(GetOwner());
 		UE_LOG(NavGrid, Error, TEXT("%s: Not on grid"), *Owner->GetName());
 		return false;
 	}
 
 	ANavGrid* Grid = GetNavGrid();
-	TArray<UNavTileComponent *> InRange;
+	TArray<UNavTileComponent*> InRange;
 	Grid->GetTilesInRange(Cast<AGridPawn>(GetOwner()), InRange);
 	if (InRange.Contains(&Target))
 	{
 		// create a list of tiles from the destination to the starting point and reverse it
-		TArray<const UNavTileComponent *> Path;
-		const UNavTileComponent *Current = &Target;
+		TArray<const UNavTileComponent*> Path;
+		const UNavTileComponent* Current = &Target;
 		while (Current)
 		{
 			Path.Add(Current);
 			Current = Current->Backpointer;
 		}
+
 		if (bStringPullPath)
 		{
-			TArray<const UNavTileComponent *> StringPulledPath;
+			TArray<const UNavTileComponent*> StringPulledPath;
 			StringPull(Path, StringPulledPath);
 			Path = StringPulledPath;
 		}
+
 		Algo::Reverse(Path);
 
 		// Build the path spline and path segments
@@ -359,6 +365,7 @@ bool UGridMovementComponent::CreatePath(const UNavTileComponent &Target)
 					Path[Idx]->AddPathSegments(*Spline, PathSegments, Idx == Path.Num() - 1);
 				}
 			}
+
 			return true; // success!
 		}
 	}
@@ -366,17 +373,18 @@ bool UGridMovementComponent::CreatePath(const UNavTileComponent &Target)
 	return false; // no path to TargetTile
 }
 
-bool UGridMovementComponent::MoveTo(const UNavTileComponent &Target)
+bool UGridMovementComponent::MoveTo(const UNavTileComponent& Target)
 {
 	bool PathExists = CreatePath(Target);
 	if (PathExists)
 	{
 		ChangeMovementMode(EGridMovementMode::Walking);
 	}
+
 	return PathExists;
 }
 
-void UGridMovementComponent::TurnTo(const FRotator & Forward)
+void UGridMovementComponent::TurnTo(const FRotator& Forward)
 {
 	if (AvailableMovementModes.Contains(EGridMovementMode::InPlaceTurn))
 	{
@@ -387,7 +395,7 @@ void UGridMovementComponent::TurnTo(const FRotator & Forward)
 
 void UGridMovementComponent::SnapToGrid()
 {
-	AGridPawn *GridPawnOwner = Cast<AGridPawn>(GetOwner());
+	AGridPawn* GridPawnOwner = Cast<AGridPawn>(GetOwner());
 	check(GridPawnOwner);
 
 	ConsiderUpdateCurrentTile();
@@ -434,13 +442,15 @@ float UGridMovementComponent::GetRemainingDistance()
 	return FMath::Max(Spline->GetSplineLength() - Distance, 0.0f);
 }
 
-FRotator UGridMovementComponent::ApplyRotationLocks(const FRotator & InRotation)
+FRotator UGridMovementComponent::ApplyRotationLocks(const FRotator& InRotation)
 {
 	FRotator OwnerRot = GetOwner()->GetActorRotation();
+
 	FRotator Ret;
 	Ret.Pitch = LockPitch ? OwnerRot.Pitch : InRotation.Pitch;
 	Ret.Roll = LockRoll ? OwnerRot.Roll : InRotation.Roll;
 	Ret.Yaw = LockYaw ? OwnerRot.Yaw : InRotation.Yaw;
+
 	return Ret;
 }
 
@@ -464,10 +474,11 @@ void UGridMovementComponent::ShowPath()
 
 void UGridMovementComponent::HidePath()
 {
-	for (USplineMeshComponent *SMesh : SplineMeshes)
+	for (USplineMeshComponent* SMesh : SplineMeshes)
 	{
 		SMesh->DestroyComponent();
 	}
+
 	SplineMeshes.Empty();
 }
 
@@ -552,7 +563,7 @@ void UGridMovementComponent::AddSplineMesh(float From, float To)
 	FVector UpVector = EndPos - StartPos;
 	UpVector = FVector(UpVector.Y, UpVector.Z, UpVector.X);
 
-	UPROPERTY() USplineMeshComponent *SplineMesh = NewObject<USplineMeshComponent>(this);
+	USplineMeshComponent* SplineMesh = NewObject<USplineMeshComponent>(this);
 	SplineMesh->SetMobility(EComponentMobility::Movable);
 	SplineMesh->SetStartAndEnd(StartPos, StartTan, EndPos, EndTan);
 	SplineMesh->SetStaticMesh(PathMesh);
@@ -562,7 +573,7 @@ void UGridMovementComponent::AddSplineMesh(float From, float To)
 	SplineMeshes.Add(SplineMesh);
 }
 
-FRotator UGridMovementComponent::LimitRotation(const FRotator &OldRotation, const FRotator &NewRotation, float DeltaTime)
+FRotator UGridMovementComponent::LimitRotation(const FRotator& OldRotation, const FRotator& NewRotation, float DeltaTime)
 {
 	FRotator Result = OldRotation.GetNormalized();
 	FRotator DeltaRotation = NewRotation - OldRotation;

@@ -1,5 +1,6 @@
 #include "NavGridPlugin.h"
 
+#include "NavGrid.h"
 
 void NavGridPluginImpl::StartupModule()
 {

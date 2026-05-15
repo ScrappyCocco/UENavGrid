@@ -1,14 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
+
+#include "Components/BoxComponent.h"
 
 #include "Components/SplineComponent.h"
 #include "Components/SceneComponent.h"
-#include "Components/BoxComponent.h"
 #include "GridMovementComponent.h"
 
 #include "NavTileComponent.generated.h"
-
 
 /**
 * A single tile in a navigation grid
@@ -17,25 +15,27 @@ UCLASS(meta = (BlueprintSpawnableComponent), Blueprintable)
 class NAVGRID_API UNavTileComponent : public UBoxComponent
 {
 	GENERATED_BODY()
+
 public:
+
 	UNavTileComponent();
 
-protected:
-	UPROPERTY(Transient)
-	ANavGrid *Grid;
-public:
-	virtual void SetGrid(ANavGrid *InGrid);
+	virtual void SetGrid(ANavGrid* InGrid);
 	ANavGrid* GetGrid() const;
 
-// Pathing
+	// Pathing
+
 	/* Cost of moving into this tile*/
 	UPROPERTY(BlueprintReadWrite, EditAnyWhere, Category = "Pathfinding")
 	float Cost = 1;
+
 	/* Distance from starting point of path */
 	float Distance;
+
 	/* Previous tile in path */
 	UPROPERTY()
-	UNavTileComponent *Backpointer;
+	TObjectPtr<UNavTileComponent> Backpointer;
+
 	/* Is this node in the 'visited' set? - Helper var for pathfinding */
 	bool Visited;
 	/* Rest temporary data (like distance and other vars used in pathfinding) */
@@ -46,31 +46,30 @@ public:
 	TSet<EGridMovementMode> MovementModes;
 
 	/* is there anything blocking an actor from moving from FromPos to this tile? Uses the capsule for collision testing */
-	virtual bool Obstructed(const FVector &FromPos, const UCapsuleComponent &CollisionCapsule) const;
+	virtual bool Obstructed(const FVector& FromPos, const UCapsuleComponent& CollisionCapsule) const;
 	/* is there anything blocking an actor from moving between From and To? Uses the capsule for collision testing */
-	virtual bool Obstructed(const FVector &From, const FVector &To, const UCapsuleComponent &CollisionCapsule) const;
-	virtual void GetNeighbours(const UCapsuleComponent &CollisionCapsule, TArray<UNavTileComponent *> &OutUnObstructed, TArray<UNavTileComponent *> &OutObstructed);
+	virtual bool Obstructed(const FVector& From, const FVector& To, const UCapsuleComponent& CollisionCapsule) const;
+	virtual void GetNeighbours(const UCapsuleComponent& CollisionCapsule, TArray<UNavTileComponent*>& OutUnObstructed, TArray<UNavTileComponent*>& OutObstructed);
+
 	/* Return the neighbours that are not Obstructed() */
-	void GetUnobstructedNeighbours(const UCapsuleComponent &CollisionCapsule, TArray<UNavTileComponent *> &OutNeighbours);
+	void GetUnobstructedNeighbours(const UCapsuleComponent& CollisionCapsule, TArray<UNavTileComponent*>& OutNeighbours);
+
 	/* Can a pawn traverse this tile?
 	* PawnMovementModes: movement modes availabe for the pawn
 	*/
-	virtual bool Traversable(const TSet<EGridMovementMode> &PawnMovementModes) const;
+	virtual bool Traversable(const TSet<EGridMovementMode>& PawnMovementModes) const;
 	/* Can a pawn end its turn on this tile?*/
-	virtual bool LegalPositionAtEndOfTurn(const TSet<EGridMovementMode> &PawnMovementModes) const;
+	virtual bool LegalPositionAtEndOfTurn(const TSet<EGridMovementMode>& PawnMovementModes) const;
 
 	/* Placement for pawn occupying this tile in world space */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Default")
 	virtual FVector GetPawnLocation() const;
+
 	/* Set offset in local space for pawns occupynig this tile */
 	UFUNCTION(BlueprintCallable, Category = "Default")
-	void SetPawnLocationOffset(const FVector &Offset);
-protected:
-	/* Offset in local space for any pawn occupying this tile */
-	FVector PawnLocationOffset;
+	void SetPawnLocationOffset(const FVector& Offset);
 
-public:
-// User interface
+	// User interface
 	UFUNCTION()
 	void Clicked(UPrimitiveComponent* TouchedComponent, FKey Key);
 	UFUNCTION()
@@ -91,12 +90,23 @@ public:
 	* OutPathSegments - the array we should add our path segment to
 	* EndTile - true if this is the last tile in the path
 	*/
-	virtual void AddPathSegments(USplineComponent &OutSpline, TArray<FPathSegment> &OutPathSegments, bool EndTile) const;
+	virtual void AddPathSegments(USplineComponent& OutSpline, TArray<FPathSegment>& OutPathSegments, bool EndTile) const;
+
 	/* Return a suitable upvector for a splinemesh moving across this tile */
 	virtual FVector GetSplineMeshUpVector();
 
 	/* Set a highlight for this tile */
 	virtual void SetHighlight(FName NewHighlightType);
+
 	/* draw debug information on the screen*/
-	virtual void DrawDebug(UCapsuleComponent *CollisionCapsule, bool bPersistentLines, float LifeTime, float Thickness);
+	virtual void DrawDebug(UCapsuleComponent* CollisionCapsule, bool bPersistentLines, float LifeTime, float Thickness);
+
+protected:
+
+	/* Offset in local space for any pawn occupying this tile */
+	FVector PawnLocationOffset;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ANavGrid> Grid;
+
 };

@@ -1,12 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "NavTileComponent.h"
-#include <limits>
-#include "Components/CapsuleComponent.h"
-#include "DrawDebugHelpers.h"
 
-UNavTileComponent::UNavTileComponent()
-	:Super()
+#include "Components/CapsuleComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "DrawDebugHelpers.h"
+#include "NavGrid.h"
+
+UNavTileComponent::UNavTileComponent() : Super()
 {
 	PawnLocationOffset = FVector::ZeroVector;
 	SetComponentTickEnabled(false);
@@ -40,7 +39,7 @@ bool UNavTileComponent::Traversable(const TSet<EGridMovementMode>& PawnMovementM
 	return MovementModes.Intersect(PawnMovementModes).Num() > 0;
 }
 
-bool UNavTileComponent::LegalPositionAtEndOfTurn(const TSet<EGridMovementMode> &PawnMovementModes) const
+bool UNavTileComponent::LegalPositionAtEndOfTurn(const TSet<EGridMovementMode>& PawnMovementModes) const
 {
 	return MovementModes.Contains(EGridMovementMode::Stationary);
 }
@@ -50,34 +49,34 @@ FVector UNavTileComponent::GetPawnLocation() const
 	return GetComponentLocation() + GetComponentRotation().RotateVector(PawnLocationOffset);
 }
 
-void UNavTileComponent::SetPawnLocationOffset(const FVector &Offset)
+void UNavTileComponent::SetPawnLocationOffset(const FVector& Offset)
 {
 	PawnLocationOffset = Offset;
 }
 
-void UNavTileComponent::SetGrid(ANavGrid * InGrid)
+void UNavTileComponent::SetGrid(ANavGrid* InGrid)
 {
 	Grid = InGrid;
 }
 
-ANavGrid * UNavTileComponent::GetGrid() const
+ANavGrid* UNavTileComponent::GetGrid() const
 {
 	return Grid;
 }
 
 void UNavTileComponent::Reset()
 {
-	Distance = std::numeric_limits<float>::infinity();
-	Backpointer = NULL;
+	Distance = BIG_NUMBER;
+	Backpointer = nullptr;
 	Visited = false;
 }
 
-bool UNavTileComponent::Obstructed(const FVector &FromPos, const UCapsuleComponent &CollisionCapsule) const
+bool UNavTileComponent::Obstructed(const FVector& FromPos, const UCapsuleComponent& CollisionCapsule) const
 {
 	return Obstructed(FromPos + CollisionCapsule.GetRelativeLocation(), GetPawnLocation() + CollisionCapsule.GetRelativeLocation(), CollisionCapsule);
 }
 
-bool UNavTileComponent::Obstructed(const FVector &From, const FVector &To, const UCapsuleComponent &CollisionCapsule) const
+bool UNavTileComponent::Obstructed(const FVector& From, const FVector& To, const UCapsuleComponent& CollisionCapsule) const
 {
 	FHitResult OutHit;
 	FQuat Rot = FQuat::Identity;
@@ -88,7 +87,7 @@ bool UNavTileComponent::Obstructed(const FVector &From, const FVector &To, const
 	return CollisionCapsule.GetWorld()->SweepSingleByChannel(OutHit, From, To, Rot, ECollisionChannel::ECC_Pawn, CollisionShape, CQP);
 }
 
-void UNavTileComponent::GetNeighbours(const UCapsuleComponent & CollisionCapsule, TArray<UNavTileComponent*>& OutUnObstructed, TArray<UNavTileComponent*>& OutObstructed)
+void UNavTileComponent::GetNeighbours(const UCapsuleComponent& CollisionCapsule, TArray<UNavTileComponent*>& OutUnObstructed, TArray<UNavTileComponent*>& OutObstructed)
 {
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_UNavTileComponent_GetNeighbours);
 
@@ -100,9 +99,9 @@ void UNavTileComponent::GetNeighbours(const UCapsuleComponent & CollisionCapsule
 		FVector MyExtent = BoxExtent + FVector(Grid->TileSize * 0.75);
 		TArray<FHitResult> HitResults;
 		Grid->GetWorld()->SweepMultiByChannel(HitResults, GetComponentLocation(), GetComponentLocation() + FVector(0, 0, 1), GetComponentQuat(), Grid->ECC_NavGridWalkable, FCollisionShape::MakeBox(MyExtent));
-		for (FHitResult &Hit : HitResults)
+		for (FHitResult& Hit : HitResults)
 		{
-			UNavTileComponent *HitTile = Cast<UNavTileComponent>(Hit.GetComponent());
+			UNavTileComponent* HitTile = Cast<UNavTileComponent>(Hit.GetComponent());
 			if (IsValid(HitTile))
 			{
 				if (HitTile != this && !HitTile->Obstructed(GetPawnLocation(), CollisionCapsule))
@@ -118,9 +117,9 @@ void UNavTileComponent::GetNeighbours(const UCapsuleComponent & CollisionCapsule
 	}
 }
 
-void UNavTileComponent::GetUnobstructedNeighbours(const UCapsuleComponent &CollisionCapsule, TArray<UNavTileComponent *> &OutNeighbours)
+void UNavTileComponent::GetUnobstructedNeighbours(const UCapsuleComponent& CollisionCapsule, TArray<UNavTileComponent*>& OutNeighbours)
 {
-	TArray<UNavTileComponent *> Dummy;
+	TArray<UNavTileComponent*> Dummy;
 	GetNeighbours(CollisionCapsule, OutNeighbours, Dummy);
 }
 
@@ -154,7 +153,7 @@ void UNavTileComponent::TouchEnd(ETouchIndex::Type Type, UPrimitiveComponent* To
 	Grid->TileClicked(this);
 }
 
-void UNavTileComponent::AddPathSegments(USplineComponent &OutSpline, TArray<FPathSegment> &OutPathSegments, bool EndTile) const
+void UNavTileComponent::AddPathSegments(USplineComponent& OutSpline, TArray<FPathSegment>& OutPathSegments, bool EndTile) const
 {
 	FVector EntryPoint = OutSpline.GetLocationAtSplinePoint(OutSpline.GetNumberOfSplinePoints() - 1, ESplineCoordinateSpace::Local);
 	float SegmentStart = OutSpline.GetSplineLength();
@@ -169,18 +168,18 @@ FVector UNavTileComponent::GetSplineMeshUpVector()
 
 void UNavTileComponent::SetHighlight(FName NewHighlightType)
 {
-	auto *HighlightComponent = Grid->GetHighlightComponent(NewHighlightType);
+	auto* HighlightComponent = Grid->GetHighlightComponent(NewHighlightType);
 	if (HighlightComponent)
 	{
 		FVector MeshSize = HighlightComponent->GetStaticMesh()->GetBoundingBox().GetSize();
 		FVector TileSize = GetScaledBoxExtent() * 2;
 		FTransform Transform = GetComponentTransform();
 		Transform.SetScale3D(FVector(TileSize.X / MeshSize.X, TileSize.Y / MeshSize.Y, 1));
-		HighlightComponent->AddInstanceWorldSpace(Transform);
+		HighlightComponent->AddInstance(Transform, true);
 	}
 }
 
-void UNavTileComponent::DrawDebug(UCapsuleComponent *CollisionCapsule, bool bPersistentLines, float LifeTime, float Thickness)
+void UNavTileComponent::DrawDebug(UCapsuleComponent* CollisionCapsule, bool bPersistentLines, float LifeTime, float Thickness)
 {
 	DrawDebugCapsule(GetWorld(), GetPawnLocation() + CollisionCapsule->GetRelativeLocation(), CollisionCapsule->GetScaledCapsuleHalfHeight(), CollisionCapsule->GetScaledCapsuleRadius(),
 		CollisionCapsule->GetComponentQuat(), FColor::Cyan, bPersistentLines, LifeTime, 0, Thickness);
@@ -189,13 +188,13 @@ void UNavTileComponent::DrawDebug(UCapsuleComponent *CollisionCapsule, bool bPer
 	{
 		DrawDebugBox(GetWorld(), GetComponentLocation(), BoxExtent + FVector(Grid->TileSize * 0.75), GetComponentQuat(), FColor::Blue, bPersistentLines, LifeTime, 0, Thickness);
 	}
-	TArray<UNavTileComponent *> UnObstructed, Obstructed;
+	TArray<UNavTileComponent*> UnObstructed, Obstructed;
 	GetNeighbours(*CollisionCapsule, UnObstructed, Obstructed);
-	for (UNavTileComponent *Tile : UnObstructed)
+	for (UNavTileComponent* Tile : UnObstructed)
 	{
 		DrawDebugLine(GetWorld(), GetPawnLocation() + CollisionCapsule->GetRelativeLocation(), CollisionCapsule->GetRelativeLocation() + ((GetPawnLocation() + Tile->GetPawnLocation()) / 2), FColor::Green, bPersistentLines, LifeTime, 0, Thickness);
 	}
-	for (UNavTileComponent *Tile : Obstructed)
+	for (UNavTileComponent* Tile : Obstructed)
 	{
 		DrawDebugLine(GetWorld(), GetPawnLocation() + CollisionCapsule->GetRelativeLocation(), CollisionCapsule->GetRelativeLocation() + ((GetPawnLocation() + Tile->GetPawnLocation()) / 2), FColor::Red, bPersistentLines, LifeTime, 0, Thickness);
 	}

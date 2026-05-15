@@ -1,10 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "NavGrid.h"
 
-#include "AssetRegistryModule.h"
-
-#include <limits>
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetRegistry/IAssetRegistry.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "GridPawn.h"
+#include "NavGridGameState.h"
 
 DEFINE_LOG_CATEGORY(NavGrid);
 
@@ -14,7 +14,7 @@ FName ANavGrid::DisableVirtualTilesTag = "NavGrid:DisableVirtualTiles";
 // Sets default values
 ANavGrid::ANavGrid()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
 	TileClass = UNavTileComponent::StaticClass();
@@ -41,39 +41,39 @@ ANavGrid::ANavGrid()
 	AddHighlightType("Dangerous", TEXT("Material'/NavGrid/Materials/Dangerous_Mat.Dangerous_Mat'"));
 	AddHighlightType("Special", TEXT("Material'/NavGrid/Materials/Special_Mat.Special_Mat'"));
 
-	CurrentPawn = NULL;
-	CurrentTile = NULL;
+	CurrentPawn = nullptr;
+	CurrentTile = nullptr;
 }
 
-void ANavGrid::SetTileHighlight(UNavTileComponent & Tile, FName Type)
+void ANavGrid::SetTileHighlight(UNavTileComponent& Tile, FName Type)
 {
 	Tile.SetHighlight(Type);
 }
 
 void ANavGrid::ClearTileHighlights()
 {
-	for (auto &H : TileHighlights)
+	for (auto& H : TileHighlights)
 	{
 		H.Value->ClearInstances();
 	}
 }
 
-void ANavGrid::AddHighlightType(const FName &Type, const TCHAR *FileName)
+void ANavGrid::AddHighlightType(const FName& Type, const TCHAR* FileName)
 {
 	TileHighLightPaths.Add(Type, FileName);
 }
 
-UInstancedStaticMeshComponent * ANavGrid::GetHighlightComponent(FName Type)
+UInstancedStaticMeshComponent* ANavGrid::GetHighlightComponent(FName Type)
 {
 	/* build the instanced mesh component if we have not already done so */
 	if (!TileHighlights.Contains(Type) && TileHighLightPaths.Contains(Type))
 	{
 		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-		UStaticMesh *Mesh = LoadObject<UStaticMesh>(this, TEXT("StaticMesh'/NavGrid/SMesh/NavGrid_TileHighlight.NavGrid_TileHighlight'"));
+		UStaticMesh* Mesh = LoadObject<UStaticMesh>(this, TEXT("StaticMesh'/NavGrid/SMesh/NavGrid_TileHighlight.NavGrid_TileHighlight'"));
 		check(Mesh);
-		UMaterial *Material = LoadObject<UMaterial>(this, TileHighLightPaths[Type]);
+		UMaterial* Material = LoadObject<UMaterial>(this, TileHighLightPaths[Type]);
 		check(Material);
-		auto *Comp = NewObject<UInstancedStaticMeshComponent>(this);
+		auto* Comp = NewObject<UInstancedStaticMeshComponent>(this);
 		Comp->SetupAttachment(GetRootComponent());
 		Comp->SetStaticMesh(Mesh);
 		Comp->SetMaterial(0, Material);
@@ -89,16 +89,16 @@ UInstancedStaticMeshComponent * ANavGrid::GetHighlightComponent(FName Type)
 	}
 	else
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
-ANavGrid *ANavGrid::GetNavGrid(AActor *ActorInWorld)
+ANavGrid* ANavGrid::GetNavGrid(AActor* ActorInWorld)
 {
 	return GetNavGrid(ActorInWorld->GetWorld());
 }
 
-ANavGrid * ANavGrid::GetNavGrid(UWorld *World)
+ANavGrid* ANavGrid::GetNavGrid(UWorld* World)
 {
 	ANavGridGameState* GameState = World->GetGameState<ANavGridGameState>();
 	if (IsValid(GameState))
@@ -111,14 +111,14 @@ ANavGrid * ANavGrid::GetNavGrid(UWorld *World)
 	}
 }
 
-UNavTileComponent *ANavGrid::GetTile(const FVector &WorldLocation, bool FindFloor/*= true*/, float UpwardTraceLength/* = 100*/, float DownwardTraceLength/* = 100*/)
+UNavTileComponent* ANavGrid::GetTile(const FVector& WorldLocation, bool FindFloor/*= true*/, float UpwardTraceLength/* = 100*/, float DownwardTraceLength/* = 100*/)
 {
 	return LineTraceTile(WorldLocation, FindFloor, UpwardTraceLength, DownwardTraceLength);
 }
 
-UNavTileComponent * ANavGrid::LineTraceTile(const FVector & WorldLocation, bool FindFloor, float UpwardTraceLength, float DownwardTraceLength)
+UNavTileComponent* ANavGrid::LineTraceTile(const FVector& WorldLocation, bool FindFloor, float UpwardTraceLength, float DownwardTraceLength)
 {
-	UNavTileComponent *Result = nullptr;
+	UNavTileComponent* Result = nullptr;
 
 	if (FindFloor)
 	{
@@ -127,7 +127,6 @@ UNavTileComponent * ANavGrid::LineTraceTile(const FVector & WorldLocation, bool 
 	else
 	{
 		/* Do a bunch of horizontal line traces and pick the closest tile component*/
-		UNavTileComponent *Closest = nullptr;
 		static FVector EndPoints[8] = {
 				FVector(0, 200, 0),
 				FVector(200, 200, 0),
@@ -138,9 +137,11 @@ UNavTileComponent * ANavGrid::LineTraceTile(const FVector & WorldLocation, bool 
 				FVector(-200, 0, 0),
 				FVector(-200, 200, 0)
 		};
+
+		UNavTileComponent* Closest = nullptr;
 		for (FVector EndPoint : EndPoints)
 		{
-			UNavTileComponent *Candidate = LineTraceTile(WorldLocation - EndPoint, WorldLocation + EndPoint);
+			UNavTileComponent* Candidate = LineTraceTile(WorldLocation - EndPoint, WorldLocation + EndPoint);
 			if (Candidate)
 			{
 				if (!Closest)
@@ -159,7 +160,7 @@ UNavTileComponent * ANavGrid::LineTraceTile(const FVector & WorldLocation, bool 
 	return Result;
 }
 
-UNavTileComponent *ANavGrid::LineTraceTile(const FVector &Start, const FVector &End)
+UNavTileComponent* ANavGrid::LineTraceTile(const FVector& Start, const FVector& End)
 {
 	TArray<FHitResult> HitResults;
 	FCollisionQueryParams CQP;
@@ -168,7 +169,7 @@ UNavTileComponent *ANavGrid::LineTraceTile(const FVector &Start, const FVector &
 	GetWorld()->LineTraceMultiByChannel(HitResults, Start, End, ECC_NavGridWalkable, CQP);
 	if (HitResults.Num())
 	{
-		UPrimitiveComponent *Comp = HitResults[0].GetComponent();
+		UPrimitiveComponent* Comp = HitResults[0].GetComponent();
 		return Cast<UNavTileComponent>(Comp);
 	}
 	else
@@ -177,31 +178,33 @@ UNavTileComponent *ANavGrid::LineTraceTile(const FVector &Start, const FVector &
 	}
 }
 
-void ANavGrid::TileClicked(const UNavTileComponent *Tile)
+void ANavGrid::TileClicked(const UNavTileComponent* Tile)
 {
 	OnTileClicked.Broadcast(Tile);
 }
 
-void ANavGrid::TileCursorOver(const UNavTileComponent *Tile)
+void ANavGrid::TileCursorOver(const UNavTileComponent* Tile)
 {
 	OnTileCursorOver.Broadcast(Tile);
 }
 
-void ANavGrid::EndTileCursorOver(const UNavTileComponent *Tile)
+void ANavGrid::EndTileCursorOver(const UNavTileComponent* Tile)
 {
 	OnEndTileCursorOver.Broadcast(Tile);
 }
 
-void ANavGrid::CalculateTilesInRange(AGridPawn *Pawn)
+void ANavGrid::CalculateTilesInRange(AGridPawn* Pawn)
 {
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_ANavGrid_CalculateTilesInRange);
 
 	ClearTiles();
+
 	if (EnableVirtualTiles)
 	{
 		GenerateVirtualTiles(Pawn);
 	}
-	UNavTileComponent *Current = Pawn->GetTile();
+
+	UNavTileComponent* Current = Pawn->GetTile();
 	/* if we're not on the grid, the number of tiles in range is zero */
 	if (!Current)
 	{
@@ -209,14 +212,14 @@ void ANavGrid::CalculateTilesInRange(AGridPawn *Pawn)
 	}
 
 	Current->Distance = 0;
-	TArray<UNavTileComponent *> NeighbouringTiles;
+	TArray<UNavTileComponent*> NeighbouringTiles;
 	Current->GetUnobstructedNeighbours(*Pawn->MovementCollisionCapsule, NeighbouringTiles);
-	TArray<UNavTileComponent *> TentativeSet(NeighbouringTiles);
+	TArray<UNavTileComponent*> TentativeSet(NeighbouringTiles);
 
 	while (Current)
 	{
 		Current->GetUnobstructedNeighbours(*Pawn->MovementCollisionCapsule, NeighbouringTiles);
-		for (UNavTileComponent *N : NeighbouringTiles)
+		for (UNavTileComponent* N : NeighbouringTiles)
 		{
 			if (!N->Traversable(Pawn->MovementComponent->AvailableMovementModes))
 			{
@@ -231,7 +234,7 @@ void ANavGrid::CalculateTilesInRange(AGridPawn *Pawn)
 
 					//	Prioritize straight paths by using the world distance as a tiebreaker
 					//	when TentativeDistance is equal N->Dinstance
-					float OldDistance = std::numeric_limits<float>::infinity();
+					float OldDistance = BIG_NUMBER;
 					float NewDistance = 0;
 					if (TentativeDistance == N->Distance)
 					{
@@ -264,12 +267,12 @@ void ANavGrid::CalculateTilesInRange(AGridPawn *Pawn)
 		}
 		else
 		{
-			Current = NULL;
+			Current = nullptr;
 		}
 	}
 }
 
-void ANavGrid::GetTilesInRange(AGridPawn *Pawn, TArray<UNavTileComponent*>& OutTiles)
+void ANavGrid::GetTilesInRange(AGridPawn* Pawn, TArray<UNavTileComponent*>& OutTiles)
 {
 	if (Pawn != CurrentPawn || Pawn->GetTile() != CurrentTile)
 	{
@@ -283,9 +286,9 @@ void ANavGrid::GetTilesInRange(AGridPawn *Pawn, TArray<UNavTileComponent*>& OutT
 void ANavGrid::ClearTiles()
 {
 	TilesInRange.Empty();
-	TArray<UNavTileComponent *> AllTiles;
+	TArray<UNavTileComponent*> AllTiles;
 	GetEveryTile(AllTiles, GetWorld());
-	for (auto *T : AllTiles)
+	for (auto* T : AllTiles)
 	{
 		T->Reset();
 	}
@@ -294,7 +297,7 @@ void ANavGrid::ClearTiles()
 	NumPersistentTiles = AllTiles.Num() - VirtualTiles.Num();
 }
 
-bool ANavGrid::TraceTileLocation(const FVector & TraceStart, const FVector & TraceEnd, FVector & OutTilePos)
+bool ANavGrid::TraceTileLocation(const FVector& TraceStart, const FVector& TraceEnd, FVector& OutTilePos)
 {
 	FCollisionQueryParams CQP;
 	CQP.bFindInitialOverlaps = true;
@@ -321,14 +324,14 @@ bool ANavGrid::TraceTileLocation(const FVector & TraceStart, const FVector & Tra
 	return HitResult.bBlockingHit && !HitResult.bStartPenetrating && !bHasDisableTileTag;
 }
 
-UNavTileComponent * ANavGrid::PlaceTile(const FVector & Location, AActor * TileOwner)
+UNavTileComponent* ANavGrid::PlaceTile(const FVector& Location, AActor* TileOwner)
 {
 	if (!TileOwner)
 	{
 		TileOwner = this;
 	}
 
-	UNavTileComponent *TileComp = NewObject<UNavTileComponent>(TileOwner, TileClass);
+	UNavTileComponent* TileComp = NewObject<UNavTileComponent>(TileOwner, TileClass);
 	TileComp->SetupAttachment(TileOwner->GetRootComponent());
 	TileComp->SetWorldTransform(FTransform::Identity);
 	TileComp->SetWorldLocation(Location);
@@ -339,7 +342,7 @@ UNavTileComponent * ANavGrid::PlaceTile(const FVector & Location, AActor * TileO
 	return TileComp;
 }
 
-UNavTileComponent * ANavGrid::ConsiderPlaceTile(const FVector &TraceStart, const FVector &TraceEnd, AActor * TileOwner /*= NULL*/)
+UNavTileComponent* ANavGrid::ConsiderPlaceTile(const FVector& TraceStart, const FVector& TraceEnd, AActor* TileOwner /*= nullptr*/)
 {
 	if (!TileOwner)
 	{
@@ -375,9 +378,9 @@ UNavTileComponent * ANavGrid::ConsiderPlaceTile(const FVector &TraceStart, const
 	return nullptr;
 }
 
-FVector ANavGrid::AdjustToTileLocation(const FVector &Location)
+FVector ANavGrid::AdjustToTileLocation(const FVector& Location)
 {
-	UNavTileComponent *SnapTile = LineTraceTile(Location, true, 100, 100);
+	UNavTileComponent* SnapTile = LineTraceTile(Location, true, 100, 100);
 	if (SnapTile)
 	{
 		return SnapTile->GetComponentLocation();
@@ -394,7 +397,7 @@ FVector ANavGrid::AdjustToTileLocation(const FVector &Location)
 	return AdjustedLocation;
 }
 
-void ANavGrid::GenerateVirtualTiles(const AGridPawn *Pawn)
+void ANavGrid::GenerateVirtualTiles(const AGridPawn* Pawn)
 {
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_ANavGrid_GenerateVirtualTiles);
 
@@ -417,7 +420,7 @@ void ANavGrid::GenerateVirtualTiles(const AGridPawn *Pawn)
 		{
 			for (float Z = Max.Z; Z >= Min.Z; Z -= TileSize)
 			{
-				UNavTileComponent *TileComp = ConsiderPlaceTile(FVector(X, Y, Z + TileSize), FVector(X, Y, Z - 0.1));
+				UNavTileComponent* TileComp = ConsiderPlaceTile(FVector(X, Y, Z + TileSize), FVector(X, Y, Z - 0.1));
 				if (TileComp)
 				{
 					VirtualTiles.Add(TileComp);
@@ -427,10 +430,10 @@ void ANavGrid::GenerateVirtualTiles(const AGridPawn *Pawn)
 	}
 }
 
-void ANavGrid::GenerateVirtualTile(const AGridPawn * Pawn)
+void ANavGrid::GenerateVirtualTile(const AGridPawn* Pawn)
 {
 	FVector Location = AdjustToTileLocation(Pawn->GetActorLocation());
-	UNavTileComponent *TileComp = ConsiderPlaceTile(Location + FVector(0, 0, TileSize), Location - FVector(0, 0, 0.1));
+	UNavTileComponent* TileComp = ConsiderPlaceTile(Location + FVector(0, 0, TileSize), Location - FVector(0, 0, 0.1));
 	if (TileComp)
 	{
 		VirtualTiles.Add(TileComp);
@@ -439,7 +442,7 @@ void ANavGrid::GenerateVirtualTile(const AGridPawn * Pawn)
 
 void ANavGrid::DestroyVirtualTiles()
 {
-	for (UNavTileComponent *T : VirtualTiles)
+	for (UNavTileComponent* T : VirtualTiles)
 	{
 		if (IsValid(T))
 		{
@@ -451,11 +454,12 @@ void ANavGrid::DestroyVirtualTiles()
 
 void ANavGrid::Destroyed()
 {
-	Super::Destroyed();
 	DestroyVirtualTiles();
+
+	Super::Destroyed();
 }
 
-void ANavGrid::GetEveryTile(TArray<UNavTileComponent *> &OutTiles, UWorld * World)
+void ANavGrid::GetEveryTile(TArray<UNavTileComponent*>& OutTiles, UWorld* World)
 {
 	for (TObjectIterator<UNavTileComponent> Itr; Itr; ++Itr)
 	{

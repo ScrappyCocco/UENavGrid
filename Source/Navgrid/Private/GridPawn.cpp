@@ -1,16 +1,22 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "GridPawn.h"
+
+#include "Components/ArrowComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "EngineUtils.h"
+#include "NavGrid.h"
+#include "NavGridGameState.h"
+#include "TurnComponent.h"
+#include "TurnManager.h"
 
 #if WITH_EDITORONLY_DATA
 #include "Editor.h"
+#include "Selection.h"
 #endif
 
 // Sets default values
-AGridPawn::AGridPawn()
-	: Super()
+AGridPawn::AGridPawn() : Super()
 {
- 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>("Root");
@@ -37,7 +43,7 @@ AGridPawn::AGridPawn()
 
 	SelectedHighlight = CreateDefaultSubobject<UStaticMeshComponent>("SelectedHighlight");
 	SelectedHighlight->SetupAttachment(SceneRoot);
-	UStaticMesh *Selected = ConstructorHelpers::FObjectFinder<UStaticMesh>(
+	UStaticMesh* Selected = ConstructorHelpers::FObjectFinder<UStaticMesh>(
 		TEXT("StaticMesh'/NavGrid/SMesh/NavGrid_Cursor.NavGrid_Cursor'")).Object;
 	SelectedHighlight->SetStaticMesh(Selected);
 	SelectedHighlight->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -63,7 +69,7 @@ void AGridPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ATurnManager *TurnManager =TurnComponent->GetTurnManager();
+	ATurnManager* TurnManager = TurnComponent->GetTurnManager();
 	if (IsValid(TurnManager))
 	{
 		TurnManager->OnRoundStart().AddDynamic(this, &AGridPawn::OnRoundStart);
@@ -81,7 +87,7 @@ void AGridPawn::BeginPlay()
 #endif //WITH_EDITORONLY_DATA
 }
 
-void AGridPawn::OnConstruction(const FTransform & Transform)
+void AGridPawn::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
@@ -97,7 +103,7 @@ void AGridPawn::OnConstruction(const FTransform & Transform)
 #endif //WITH_EDITORONLY_DATA
 }
 
-void AGridPawn::SetGenericTeamId(const FGenericTeamId & InTeamId)
+void AGridPawn::SetGenericTeamId(const FGenericTeamId& InTeamId)
 {
 	// we must unregister before we change the team id
 	TurnComponent->UnregisterWithTurnManager();
@@ -105,7 +111,10 @@ void AGridPawn::SetGenericTeamId(const FGenericTeamId & InTeamId)
 	TurnComponent->RegisterWithTurnManager();
 }
 
-void AGridPawn::OnAnyTurnStart(UTurnComponent *InTurnComponent)
+void AGridPawn::OnRoundStart()
+{}
+
+void AGridPawn::OnAnyTurnStart(UTurnComponent* InTurnComponent)
 {
 	if (InTurnComponent == TurnComponent)
 	{
@@ -129,7 +138,7 @@ void AGridPawn::OnTurnStart()
 	}
 }
 
-void AGridPawn::OnAnyTurnEnd(UTurnComponent *InTurnComponent)
+void AGridPawn::OnAnyTurnEnd(UTurnComponent* InTurnComponent)
 {
 	if (InTurnComponent == TurnComponent)
 	{
@@ -143,7 +152,7 @@ void AGridPawn::OnTurnEnd()
 	MovementComponent->HidePath();
 }
 
-void AGridPawn::OnAnyTeamTurnStart(const FGenericTeamId & InTeamId)
+void AGridPawn::OnAnyTeamTurnStart(const FGenericTeamId& InTeamId)
 {
 	if (InTeamId == GetGenericTeamId())
 	{
@@ -151,13 +160,19 @@ void AGridPawn::OnAnyTeamTurnStart(const FGenericTeamId & InTeamId)
 	}
 }
 
-void AGridPawn::OnAnyTeamTurnEnd(const FGenericTeamId & InTeamId)
+void AGridPawn::OnTeamTurnStart()
+{}
+
+void AGridPawn::OnAnyTeamTurnEnd(const FGenericTeamId& InTeamId)
 {
 	if (InTeamId == GetGenericTeamId())
 	{
 		OnTeamTurnEnd();
 	}
 }
+
+void AGridPawn::OnTeamTurnEnd()
+{}
 
 void AGridPawn::OnMoveEnd()
 {
@@ -166,13 +181,16 @@ void AGridPawn::OnMoveEnd()
 	TurnComponent->EndTurn();
 }
 
-void AGridPawn::OnAnyPawnReadyForInput(UTurnComponent * InTurnComponent)
+void AGridPawn::OnAnyPawnReadyForInput(UTurnComponent* InTurnComponent)
 {
 	if (InTurnComponent == TurnComponent)
 	{
 		OnPawnReadyForInput();
 	}
 }
+
+void AGridPawn::OnPawnReadyForInput()
+{}
 
 void AGridPawn::PlayAITurn()
 {
@@ -205,10 +223,10 @@ EGridPawnState AGridPawn::GetState() const
 */
 bool AGridPawn::CanBeSelected()
 {
-	ANavGridGameState *GameState = Cast<ANavGridGameState>(GetWorld()->GetGameState());
+	ANavGridGameState* GameState = Cast<ANavGridGameState>(GetWorld()->GetGameState());
 	if (IsValid(GameState))
 	{
-		ATurnManager *TurnManager = GameState->GetTurnManager();
+		ATurnManager* TurnManager = GameState->GetTurnManager();
 		if (IsValid(TurnManager))
 		{
 			// 1) It must be the pawns teams turn
@@ -234,12 +252,12 @@ bool AGridPawn::CanBeSelected()
 	return false;
 }
 
-bool AGridPawn::CanMoveTo(const UNavTileComponent & Tile)
+bool AGridPawn::CanMoveTo(const UNavTileComponent& Tile)
 {
 	if (MovementComponent->GetTile() != &Tile &&
 		Tile.LegalPositionAtEndOfTurn(MovementComponent->AvailableMovementModes))
 	{
-		TArray<UNavTileComponent *> InRange;
+		TArray<UNavTileComponent*> InRange;
 		MovementComponent->GetNavGrid()->GetTilesInRange(this, InRange);
 		if (Tile.Distance <= MovementComponent->MovementRange)
 		{
@@ -249,13 +267,23 @@ bool AGridPawn::CanMoveTo(const UNavTileComponent & Tile)
 	return false;
 }
 
-void AGridPawn::MoveTo(const UNavTileComponent & Tile)
+void AGridPawn::MoveTo(const UNavTileComponent& Tile)
 {
 	MovementComponent->MoveTo(Tile);
 	MovementComponent->HidePath();
 }
 
-void AGridPawn::Clicked(AActor *ClickedActor, FKey PressedKey)
+UNavTileComponent* AGridPawn::GetTile() const
+{
+	if (MovementComponent)
+	{
+		return MovementComponent->GetTile();
+	}
+
+	return nullptr;
+}
+
+void AGridPawn::Clicked(AActor* ClickedActor, FKey PressedKey)
 {
 	if (CanBeSelected())
 	{
@@ -264,9 +292,9 @@ void AGridPawn::Clicked(AActor *ClickedActor, FKey PressedKey)
 }
 
 #if WITH_EDITORONLY_DATA
-void AGridPawn::OnObjectSelectedInEditor(UObject * SelectedObject)
+void AGridPawn::OnObjectSelectedInEditor(UObject* SelectedObject)
 {
-	AGridPawn *SelectedPawn = Cast<AGridPawn>(SelectedObject);
+	AGridPawn* SelectedPawn = Cast<AGridPawn>(SelectedObject);
 	if (SelectedPawn && SelectedPawn->bPreviewTiles)
 	{
 		if (SelectedPawn == this)
@@ -306,17 +334,17 @@ void AGridPawn::UpdatePreviewTiles()
 		PreviewGrid->TileSize = PreviewTileSize;
 		PreviewGrid->Tags.Add(FName("PreviewGrid"));
 
-		TArray<UNavTileComponent *> Tiles;
+		TArray<UNavTileComponent*> Tiles;
 		ANavGrid::GetEveryTile(Tiles, GetWorld());
-		for (UNavTileComponent *Tile : Tiles)
+		for (UNavTileComponent* Tile : Tiles)
 		{
 			Tile->SetGrid(PreviewGrid);
 		}
 	}
 
-	TArray<UNavTileComponent *> Tiles;
+	TArray<UNavTileComponent*> Tiles;
 	PreviewGrid->GetTilesInRange(this, Tiles);
-	for (UNavTileComponent *Tile : Tiles)
+	for (UNavTileComponent* Tile : Tiles)
 	{
 		Tile->SetHighlight("Movable");
 	}

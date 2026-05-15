@@ -1,22 +1,22 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "NavLadderComponent.h"
 
-UNavLadderComponent::UNavLadderComponent()
-	:Super()
+#include "Components/CapsuleComponent.h"
+#include "NavGrid.h"
+
+UNavLadderComponent::UNavLadderComponent() :Super()
 {
 	MovementModes.Empty();
 	MovementModes.Add(EGridMovementMode::ClimbingUp);
 	MovementModes.Add(EGridMovementMode::ClimbingDown);
 }
 
-void UNavLadderComponent::SetGrid(ANavGrid *InGrid)
+void UNavLadderComponent::SetGrid(ANavGrid* InGrid)
 {
 	Super::SetGrid(InGrid);
 	TileSize = InGrid->TileSize;
 }
 
-void UNavLadderComponent::GetNeighbours(const UCapsuleComponent &CollisionCapsule, TArray<UNavTileComponent *> &OutUnObstructed, TArray<UNavTileComponent *> &OutObstructed)
+void UNavLadderComponent::GetNeighbours(const UCapsuleComponent& CollisionCapsule, TArray<UNavTileComponent*>& OutUnObstructed, TArray<UNavTileComponent*>& OutObstructed)
 {
 	OutUnObstructed.Empty();
 	OutObstructed.Empty();
@@ -25,18 +25,19 @@ void UNavLadderComponent::GetNeighbours(const UCapsuleComponent &CollisionCapsul
 		FCollisionShape Shape = FCollisionShape::MakeBox(BoxExtent + FVector(Grid->TileSize / 2));
 
 		TArray<FHitResult> HitResults;
-		TArray<UNavTileComponent *> AllNeighbours;
 		Grid->GetWorld()->SweepMultiByChannel(HitResults, GetComponentLocation(), GetComponentLocation() + FVector(0, 0, 1), GetComponentQuat(), Grid->ECC_NavGridWalkable, Shape);
-		for (FHitResult &Hit : HitResults)
+
+		TArray<UNavTileComponent*> AllNeighbours;
+		for (FHitResult& Hit : HitResults)
 		{
-			UNavTileComponent *HitTile = Cast<UNavTileComponent>(Hit.GetComponent());
+			UNavTileComponent* HitTile = Cast<UNavTileComponent>(Hit.GetComponent());
 			if (IsValid(HitTile) && HitTile != this)
 			{
 				AllNeighbours.AddUnique(HitTile);
 			}
 		}
 
-		for (UNavTileComponent *N : AllNeighbours)
+		for (UNavTileComponent* N : AllNeighbours)
 		{
 			//Determine if we should trace from the top or bottom point
 			float TopDistance = (GetTopPathPoint() - N->GetPawnLocation()).Size();
@@ -54,7 +55,7 @@ void UNavLadderComponent::GetNeighbours(const UCapsuleComponent &CollisionCapsul
 	}
 }
 
-bool UNavLadderComponent::Obstructed(const FVector & FromPos, const UCapsuleComponent & CollisionCapsule) const
+bool UNavLadderComponent::Obstructed(const FVector& FromPos, const UCapsuleComponent& CollisionCapsule) const
 {
 	//Determine if we should trace to the top or bottom point
 	float TopDistance = (GetTopPathPoint() - FromPos).Size();
@@ -70,7 +71,7 @@ bool UNavLadderComponent::Obstructed(const FVector & FromPos, const UCapsuleComp
 		GetComponentQuat(), ECollisionChannel::ECC_Pawn, CollisionShape, CQP);
 }
 
-void UNavLadderComponent::AddPathSegments(USplineComponent &OutSpline, TArray<FPathSegment> &OutPathSegments, bool EndTile) const
+void UNavLadderComponent::AddPathSegments(USplineComponent& OutSpline, TArray<FPathSegment>& OutPathSegments, bool EndTile) const
 {
 	FVector EntryPoint = OutSpline.GetLocationAtSplinePoint(OutSpline.GetNumberOfSplinePoints() - 1, ESplineCoordinateSpace::Local);
 	float TopDistance = (GetTopPathPoint() - EntryPoint).Size();

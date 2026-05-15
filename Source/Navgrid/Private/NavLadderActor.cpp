@@ -1,8 +1,9 @@
 #include "NavLadderActor.h"
 
+#include "NavLadderComponent.h"
+#include "NavGrid.h"
 
-ANavLadderActor::ANavLadderActor(const FObjectInitializer &ObjectInitializer)
-	: Super(ObjectInitializer)
+ANavLadderActor::ANavLadderActor(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	SceneComponent = CreateDefaultSubobject<USceneComponent>("RootComponent");
 	RootComponent = SceneComponent;

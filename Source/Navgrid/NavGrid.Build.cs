@@ -3,28 +3,28 @@ using System.IO;
 
 public class NavGrid : ModuleRules
 {
-    public NavGrid(ReadOnlyTargetRules TargetRules) : base(TargetRules) {
+    public NavGrid(ReadOnlyTargetRules TargetRules) : base(TargetRules)
+    {
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "AIModule" });
+
+        DefaultBuildSettings = BuildSettingsVersion.Latest;
+        IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
         if (TargetRules.bBuildEditor)
         {
-            PrivateDependencyModuleNames.AddRange(new string[] { "UnrealED" });
+            PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd" });
         }
 
         PublicIncludePaths.AddRange(
             new string[] {
-                Path.Combine(ModuleDirectory, "Public"),
-                Path.Combine(ModuleDirectory, "Classes"),
-        // ... add public include paths required here ...
-    }
-    );
-
+                Path.Combine(ModuleDirectory, "Public")
+            }
+        );
 
         PrivateIncludePaths.AddRange(
             new string[] {
-                 Path.Combine(ModuleDirectory, "Private"),
-				// ... add other private include paths required here ...
-			}
-            );
+                 Path.Combine(ModuleDirectory, "Private")
+            }
+        );
     }
 }

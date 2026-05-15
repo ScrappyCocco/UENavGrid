@@ -1,9 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "NavGridPC.h"
 
-ANavGridPC::ANavGridPC(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer)
+#include "NavGridGameState.h"
+#include "GridPawn.h"
+#include "NavGrid.h"
+#include "TurnComponent.h"
+
+ANavGridPC::ANavGridPC(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	bShowMouseCursor = true;
 	/* Enable mouse events */
@@ -16,12 +18,13 @@ ANavGridPC::ANavGridPC(const FObjectInitializer& ObjectInitializer)
 void ANavGridPC::BeginPlay()
 {
 	// grab turn manager and grid from the game state
-	auto *State = GetWorld()->GetGameState<ANavGridGameState>();
+	auto* State = GetWorld()->GetGameState<ANavGridGameState>();
+	check(State);
 	SetTurnManager(State->GetTurnManager());
 	SetGrid(State->GetNavGrid());
 }
 
-void ANavGridPC::OnTileClicked(const UNavTileComponent *Tile)
+void ANavGridPC::OnTileClicked(const UNavTileComponent* Tile)
 {
 	/* Try to move the current pawn to the clicked tile */
 	if (GridPawn && GridPawn->GetState() == EGridPawnState::Ready)
@@ -33,7 +36,7 @@ void ANavGridPC::OnTileClicked(const UNavTileComponent *Tile)
 	}
 }
 
-void ANavGridPC::OnTileCursorOver(const UNavTileComponent *Tile)
+void ANavGridPC::OnTileCursorOver(const UNavTileComponent* Tile)
 {
 	/* If the pawn is not moving, try to create a path to the hovered tile and show it */
 	if (GridPawn && GridPawn->GetState() == EGridPawnState::Ready)
@@ -41,7 +44,7 @@ void ANavGridPC::OnTileCursorOver(const UNavTileComponent *Tile)
 		Grid->Cursor->SetWorldLocation(Tile->GetPawnLocation() + FVector(0, 0, Grid->UIOffset));
 		Grid->Cursor->SetVisibility(true);
 
-		UGridMovementComponent *MovementComponent = GridPawn->MovementComponent;
+		UGridMovementComponent* MovementComponent = GridPawn->MovementComponent;
 		if (GridPawn->CanMoveTo(*Tile))
 		{
 			MovementComponent->CreatePath(*Tile);
@@ -50,18 +53,21 @@ void ANavGridPC::OnTileCursorOver(const UNavTileComponent *Tile)
 	}
 }
 
-void ANavGridPC::OnEndTileCursorOver(const UNavTileComponent *Tile)
+void ANavGridPC::OnEndTileCursorOver(const UNavTileComponent* Tile)
 {
 	Grid->Cursor->SetVisibility(false);
 	/* Hide the previously shown path */
 	if (GridPawn)
 	{
-		UGridMovementComponent *MovementComponent = GridPawn->MovementComponent;
+		UGridMovementComponent* MovementComponent = GridPawn->MovementComponent;
 		MovementComponent->HidePath();
 	}
 }
 
-void ANavGridPC::OnTurnStart(UTurnComponent *Component)
+void ANavGridPC::OnRoundStart()
+{}
+
+void ANavGridPC::OnTurnStart(UTurnComponent* Component)
 {
 	if (Component->GetOwner()->IsA<AGridPawn>())
 	{
@@ -69,12 +75,12 @@ void ANavGridPC::OnTurnStart(UTurnComponent *Component)
 	}
 }
 
-void ANavGridPC::OnTurnEnd(UTurnComponent * Component)
+void ANavGridPC::OnTurnEnd(UTurnComponent* Component)
 {
-	GridPawn = NULL;
+	GridPawn = nullptr;
 }
 
-void ANavGridPC::SetTurnManager(ATurnManager * InTurnManager)
+void ANavGridPC::SetTurnManager(ATurnManager* InTurnManager)
 {
 	check(InTurnManager);
 
@@ -94,7 +100,7 @@ void ANavGridPC::SetTurnManager(ATurnManager * InTurnManager)
 	TurnManager->OnTeamTurnStart().AddDynamic(this, &ANavGridPC::OnTeamTurnStart);
 }
 
-void ANavGridPC::SetGrid(ANavGrid * InGrid)
+void ANavGridPC::SetGrid(ANavGrid* InGrid)
 {
 	check(InGrid);
 	if (Grid)
