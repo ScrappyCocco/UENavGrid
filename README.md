@@ -19,7 +19,7 @@ This is a simple fork of [larsjsol](https://github.com/larsjsol/)'s [NavGrid Plu
 A few more steps are needed after compiling the plugin:
 
 1. Enable the plugin for your project in the plugin-browser (`Edit->Plugins`)
-2. Create a Collision Channel in the project setting and set its default response to `Ignore` ![project settings trace channel](ReadmeImages/tracechannel.jpg)
+2. Create a Collision Channel in the project setting and set its default response to `Ignore` ![project settings trace channel](ReadmeImages/TraceChannel.jpg)
 3. Place some `ANavTileActor`s and a few `AExampleGridPawn`s in your level
 4. Set the PlayerController class to `ANavGridPC`
 5. Hit Play!
